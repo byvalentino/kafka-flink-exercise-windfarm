@@ -15,7 +15,7 @@ into functional streams (condition monitoring, asset management, power/grid).
 
 Usage:
     python producer.py                         # defaults
-    python producer.py --broker kafka:9092     # custom broker
+    python producer.py --broker kafka:29092    # custom broker inside Docker
     python producer.py --interval 1.0          # one reading per second
     python producer.py --burst 100             # produce 100 then stop
 

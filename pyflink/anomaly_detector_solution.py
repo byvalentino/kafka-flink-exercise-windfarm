@@ -41,13 +41,11 @@ t_env.execute_sql("""
         nacelle_vibration_mm_s DOUBLE,
         bearing_temp_celsius   DOUBLE,
         oil_pressure_bar       DOUBLE,
-        status                 STRING,
-        event_time AS TO_TIMESTAMP(`timestamp`),
-        WATERMARK FOR event_time AS event_time - INTERVAL '5' SECOND
+        status                 STRING
     ) WITH (
         'connector' = 'kafka',
         'topic' = 'turbine-signals',
-        'properties.bootstrap.servers' = 'kafka:9092',
+        'properties.bootstrap.servers' = 'kafka:29092',
         'properties.group.id' = 'pyflink-vibration-solution',
         'scan.startup.mode' = 'earliest-offset',
         'format' = 'json',
@@ -64,11 +62,11 @@ t_env.execute_sql("""
         active_power_kw        DOUBLE,
         status                 STRING,
         original_ts            STRING,
-        detected_at            TIMESTAMP(3)
+        detected_at            STRING
     ) WITH (
         'connector' = 'kafka',
         'topic' = 'alerts',
-        'properties.bootstrap.servers' = 'kafka:9092',
+        'properties.bootstrap.servers' = 'kafka:29092',
         'format' = 'json'
     )
 """)
@@ -85,7 +83,7 @@ result = t_env.from_path("turbine_signals") \
         col("bearing_temp_celsius"),
         col("active_power_kw"),
         col("status"),
-        col("`timestamp`").alias("original_ts"),
+        col("timestamp").alias("original_ts"),
         call("detect_vibration_anomaly",
              col("turbine_id"),
              col("nacelle_vibration_mm_s"),
@@ -102,7 +100,7 @@ result = t_env.from_path("turbine_signals") \
         col("active_power_kw"),
         col("status"),
         col("original_ts"),
-        lit(None).cast("TIMESTAMP(3)").alias("detected_at")
+        col("original_ts").alias("detected_at")
     )
 
 result.execute_insert("alerts").wait()

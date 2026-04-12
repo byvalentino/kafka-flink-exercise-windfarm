@@ -24,6 +24,7 @@ services:
     container_name: kafka
     ports:
       - "9092:9092"
+      - "29092:29092"
       - "9094:9094"
     environment:
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qg
@@ -32,9 +33,9 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_LOG_RETENTION_HOURS: 1
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -58,7 +59,7 @@ services:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: windfarm
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     depends_on:
       kafka:
         condition: service_healthy
@@ -77,7 +78,7 @@ services:
         parallelism.default: 2
         execution.checkpointing.interval: 10s
         state.backend: hashmap
-        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        state.checkpoints.dir: file:///tmp
     volumes:
       - flink-checkpoints:/tmp/flink-checkpoints
 
@@ -95,7 +96,7 @@ services:
         parallelism.default: 2
         execution.checkpointing.interval: 10s
         state.backend: hashmap
-        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        state.checkpoints.dir: file:///tmp
     volumes:
       - flink-checkpoints:/tmp/flink-checkpoints
 

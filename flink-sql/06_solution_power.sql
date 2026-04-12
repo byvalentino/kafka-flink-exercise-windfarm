@@ -2,6 +2,17 @@
 -- Lab 4, Step 2: SOLUTION — Farm Power & Grid Aggregation
 -- =============================================================
 
+CREATE TEMPORARY VIEW turbine_signals_proc AS
+SELECT
+    farm_id,
+    active_power_kw,
+    wind_speed_m_s,
+    grid_frequency_hz,
+    status,
+    PROCTIME() AS proc_time
+FROM turbine_signals
+WHERE `timestamp` IS NOT NULL;
+
 INSERT INTO power_grid_stats
 SELECT
     farm_id,
@@ -17,6 +28,10 @@ SELECT
     COUNT(*)                                                   AS turbine_count,
     SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END)       AS running_count
 FROM TABLE(
-    TUMBLE(TABLE turbine_signals, DESCRIPTOR(event_time), INTERVAL '30' SECOND)
+    TUMBLE(
+        TABLE turbine_signals_proc,
+        DESCRIPTOR(proc_time),
+        INTERVAL '30' SECOND
+    )
 )
 GROUP BY farm_id, window_start, window_end;

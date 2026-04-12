@@ -25,12 +25,12 @@ out, _ = run("docker ps --filter name=pyflink-runner --format '{{.Names}}'")
 check("PyFlink container is running", "pyflink-runner" in out,
       "Start: docker compose --profile pyflink up -d --build")
 
-out, _ = run("docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --list")
+out, _ = run("docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list")
 check("Topic 'alerts' exists", "alerts" in out,
-      "Create: docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 "
+    "Create: docker exec kafka kafka-topics --bootstrap-server localhost:9092 "
       "--create --topic alerts --partitions 3 --replication-factor 1")
 
-out, _ = run("docker exec kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 "
+out, _ = run("docker exec kafka kafka-console-consumer --bootstrap-server localhost:9092 "
              "--topic alerts --from-beginning --timeout-ms 12000 --max-messages 5", timeout=20)
 msgs = []
 if out:

@@ -21,10 +21,10 @@ def run(cmd, timeout=15):
 
 print(f"\n{B}{'='*50}\n  Lab 4: Power & Grid Windowed Aggregation\n{'='*50}{RST}\n")
 
-out, _ = run("docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --list")
+out, _ = run("docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list")
 check("Topic 'power-grid' exists", "power-grid" in out)
 
-out, _ = run("docker exec kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 "
+out, _ = run("docker exec kafka kafka-console-consumer --bootstrap-server localhost:9092 "
              "--topic power-grid --from-beginning --timeout-ms 12000 --max-messages 10", timeout=20)
 msgs = []
 if out:

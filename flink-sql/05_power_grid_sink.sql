@@ -25,6 +25,6 @@ CREATE TABLE power_grid_stats (
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'power-grid',
-    'properties.bootstrap.servers' = 'kafka:9092',
+    'properties.bootstrap.servers' = 'kafka:29092',
     'format' = 'json'
 );

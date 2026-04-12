@@ -17,14 +17,32 @@ for topic in "${TOPICS[@]}"; do
     fi
 done
 
-FLINK_KAFKA_JAR="flink-sql-connector-kafka-3.1.0-1.18.jar"
-FLINK_KAFKA_URL="https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.1.0-1.18/${FLINK_KAFKA_JAR}"
+FLINK_KAFKA_SQL_JAR="flink-sql-connector-kafka-3.1.0-1.18.jar"
+FLINK_KAFKA_SQL_URL="https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.1.0-1.18/${FLINK_KAFKA_SQL_JAR}"
+FLINK_KAFKA_RUNTIME_JAR="flink-connector-kafka-3.1.0-1.18.jar"
+FLINK_KAFKA_RUNTIME_URL="https://repo1.maven.org/maven2/org/apache/flink/flink-connector-kafka/3.1.0-1.18/${FLINK_KAFKA_RUNTIME_JAR}"
+KAFKA_CLIENTS_JAR="kafka-clients-3.5.1.jar"
+KAFKA_CLIENTS_URL="https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.5.1/${KAFKA_CLIENTS_JAR}"
 for container in flink-jobmanager flink-taskmanager; do
-    if docker exec "$container" test -f "/opt/flink/lib/${FLINK_KAFKA_JAR}" 2>/dev/null; then
-        warn "Connector present in $container."
+    if docker exec "$container" test -f "/opt/flink/lib/${FLINK_KAFKA_SQL_JAR}" 2>/dev/null; then
+        warn "${FLINK_KAFKA_SQL_JAR} present in $container."
     else
-        docker exec "$container" bash -c "cd /opt/flink/lib && curl -sLO ${FLINK_KAFKA_URL}"
-        info "Installed connector in $container"
+        docker exec "$container" bash -c "cd /opt/flink/lib && curl -sLO ${FLINK_KAFKA_SQL_URL}"
+        info "Installed ${FLINK_KAFKA_SQL_JAR} in $container"
+    fi
+
+    if docker exec "$container" test -f "/opt/flink/lib/${FLINK_KAFKA_RUNTIME_JAR}" 2>/dev/null; then
+        warn "${FLINK_KAFKA_RUNTIME_JAR} present in $container."
+    else
+        docker exec "$container" bash -c "cd /opt/flink/lib && curl -sLO ${FLINK_KAFKA_RUNTIME_URL}"
+        info "Installed ${FLINK_KAFKA_RUNTIME_JAR} in $container"
+    fi
+
+    if docker exec "$container" test -f "/opt/flink/lib/${KAFKA_CLIENTS_JAR}" 2>/dev/null; then
+        warn "${KAFKA_CLIENTS_JAR} present in $container."
+    else
+        docker exec "$container" bash -c "cd /opt/flink/lib && curl -sLO ${KAFKA_CLIENTS_URL}"
+        info "Installed ${KAFKA_CLIENTS_JAR} in $container"
     fi
 done
 

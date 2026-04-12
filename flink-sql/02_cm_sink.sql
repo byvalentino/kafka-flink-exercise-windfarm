@@ -24,6 +24,6 @@ CREATE TABLE condition_monitoring (
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'condition-monitoring',
-    'properties.bootstrap.servers' = 'kafka:9092',
+    'properties.bootstrap.servers' = 'kafka:29092',
     'format' = 'json'
 );

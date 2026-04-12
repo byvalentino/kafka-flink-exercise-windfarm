@@ -19,7 +19,7 @@ CREATE TABLE asset_events (
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'asset-events',
-    'properties.bootstrap.servers' = 'kafka:9092',
+    'properties.bootstrap.servers' = 'kafka:29092',
     'format' = 'json'
 );
 

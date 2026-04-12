@@ -24,16 +24,16 @@ print(f"\n{B}{'='*50}\n  Lab 1: Kafka Basics (Wind Farm)\n{'='*50}{RST}\n")
 out, _ = run("docker ps --filter name=kafka --format '{{.Names}}'")
 check("Kafka container is running", "kafka" in out, "Run: docker compose up -d")
 
-out, _ = run("docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --list")
+out, _ = run("docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list")
 check("Topic 'turbine-signals' exists", "turbine-signals" in out,
-      "Create: docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 "
+    "Create: docker exec kafka kafka-topics --bootstrap-server localhost:9092 "
       "--create --topic turbine-signals --partitions 3 --replication-factor 1")
 
-out, _ = run("docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 "
+out, _ = run("docker exec kafka kafka-topics --bootstrap-server localhost:9092 "
              "--describe --topic turbine-signals")
 check("Topic has 3+ partitions", out.count("Partition:") >= 3)
 
-out, _ = run("docker exec kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 "
+out, _ = run("docker exec kafka kafka-console-consumer --bootstrap-server localhost:9092 "
              "--topic turbine-signals --from-beginning --timeout-ms 5000 --max-messages 1", timeout=15)
 has_msg = False
 if out:

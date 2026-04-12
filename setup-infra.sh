@@ -22,6 +22,13 @@ for i in $(seq 1 20); do
     sleep 2
 done
 
+# Lab 1 expects turbine-signals to have at least 3 partitions.
+docker exec kafka kafka-topics --bootstrap-server localhost:9092 \
+    --create --if-not-exists --topic turbine-signals --partitions 3 --replication-factor 1 &>/dev/null || true
+docker exec kafka kafka-topics --bootstrap-server localhost:9092 \
+    --alter --topic turbine-signals --partitions 3 &>/dev/null || true
+info "Topic 'turbine-signals' is ready with 3 partitions."
+
 pip install confluent-kafka -q 2>/dev/null || pip install confluent-kafka -q --break-system-packages 2>/dev/null || true
 info "Python kafka client installed."
 

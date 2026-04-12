@@ -69,29 +69,15 @@ def detect_vibration_anomaly(
 
     3. Ignore readings from turbines in maintenance (status == 'maintenance')
     """
-    # ✏️  REPLACE THIS with your implementation:
-    #
-    # if status == 'maintenance':
-    #     return ???
-    #
-    # # Determine threshold by turbine type
-    # if turbine_id.startswith("WTG-NA"):
-    #     threshold = ???
-    # else:
-    #     threshold = ???
-    #
-    # # Pure vibration check
-    # if vibration > threshold:
-    #     return ???
-    #
-    # # Correlated check: moderate vibration + high temperature
-    # if vibration > ??? and bearing_temp > ???:
-    #     return ???
-    #
-    # return False
+    if status == "maintenance":
+        return False
 
-    # Fallback (simple — works but not turbine-aware):
-    return vibration > 5.0
+    threshold = 4.0 if turbine_id.startswith("WTG-NA") else 3.5
+    if vibration > threshold:
+        return True
+    if vibration > 3.0 and bearing_temp > 65.0:
+        return True
+    return False
 
 
 t_env.create_temporary_function("detect_vibration_anomaly", detect_vibration_anomaly)
@@ -109,13 +95,11 @@ t_env.execute_sql("""
         nacelle_vibration_mm_s DOUBLE,
         bearing_temp_celsius   DOUBLE,
         oil_pressure_bar       DOUBLE,
-        status                 STRING,
-        event_time AS TO_TIMESTAMP(`timestamp`),
-        WATERMARK FOR event_time AS event_time - INTERVAL '5' SECOND
+        status                 STRING
     ) WITH (
         'connector' = 'kafka',
         'topic' = 'turbine-signals',
-        'properties.bootstrap.servers' = 'kafka:9092',
+        'properties.bootstrap.servers' = 'kafka:29092',
         'properties.group.id' = 'pyflink-vibration-detector',
         'scan.startup.mode' = 'earliest-offset',
         'format' = 'json',
@@ -134,50 +118,47 @@ t_env.execute_sql("""
         active_power_kw        DOUBLE,
         status                 STRING,
         original_ts            STRING,
-        detected_at            TIMESTAMP(3)
+        detected_at            STRING
     ) WITH (
         'connector' = 'kafka',
         'topic' = 'alerts',
-        'properties.bootstrap.servers' = 'kafka:9092',
+        'properties.bootstrap.servers' = 'kafka:29092',
         'format' = 'json'
     )
 """)
 
 
 # ── Pipeline ─────────────────────────────────────────────────────────
-# ✏️  UNCOMMENT and complete:
-#
-# result = t_env.from_path("turbine_signals") \
-#     .select(
-#         col("turbine_id"),
-#         col("farm_id"),
-#         col("nacelle_vibration_mm_s"),
-#         col("bearing_temp_celsius"),
-#         col("active_power_kw"),
-#         col("status"),
-#         col("???").alias("original_ts"),      # which column is the timestamp?
-#         call("detect_vibration_anomaly",
-#              col("turbine_id"),
-#              col("nacelle_vibration_mm_s"),
-#              col("bearing_temp_celsius"),
-#              col("status"),
-#         ).alias("is_anomaly")
-#     ) \
-#     .filter(col("is_anomaly") == ???) \       # keep only anomalies
-#     .select(
-#         col("turbine_id"),
-#         col("farm_id"),
-#         col("nacelle_vibration_mm_s"),
-#         col("bearing_temp_celsius"),
-#         col("active_power_kw"),
-#         col("status"),
-#         col("original_ts"),
-#         lit(None).cast("TIMESTAMP(3)").alias("detected_at")
-#     )
-#
-# result.execute_insert("alerts").wait()
-#
-# (If stuck, see pyflink/anomaly_detector_solution.py)
+print("⚡ Starting vibration anomaly detector...")
+print("   Source: turbine-signals → Filter: detect_vibration_anomaly() → Sink: alerts")
+print("   Press Ctrl+C to stop.\n")
 
-print("⚠️  Pipeline not implemented yet — fill in the code above!")
-print("   Then re-run this script.")
+result = t_env.from_path("turbine_signals") \
+    .select(
+        col("turbine_id"),
+        col("farm_id"),
+        col("nacelle_vibration_mm_s"),
+        col("bearing_temp_celsius"),
+        col("active_power_kw"),
+        col("status"),
+           col("timestamp").alias("original_ts"),
+        call("detect_vibration_anomaly",
+             col("turbine_id"),
+             col("nacelle_vibration_mm_s"),
+             col("bearing_temp_celsius"),
+             col("status"),
+        ).alias("is_anomaly")
+    ) \
+    .filter(col("is_anomaly") == lit(True)) \
+    .select(
+        col("turbine_id"),
+        col("farm_id"),
+        col("nacelle_vibration_mm_s"),
+        col("bearing_temp_celsius"),
+        col("active_power_kw"),
+        col("status"),
+        col("original_ts"),
+        col("original_ts").alias("detected_at")
+    )
+
+result.execute_insert("alerts").wait()

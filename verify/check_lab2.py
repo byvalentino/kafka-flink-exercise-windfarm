@@ -21,16 +21,16 @@ def run(cmd, timeout=15):
 
 print(f"\n{B}{'='*50}\n  Lab 2: Condition Monitoring Stream\n{'='*50}{RST}\n")
 
-out, _ = run("docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --list")
+out, _ = run("docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list")
 check("Topic 'condition-monitoring' exists", "condition-monitoring" in out,
-      "Create: docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 "
+    "Create: docker exec kafka kafka-topics --bootstrap-server localhost:9092 "
       "--create --topic condition-monitoring --partitions 3 --replication-factor 1")
 
 out, _ = run("docker exec flink-jobmanager curl -sf http://localhost:8081/jobs/overview")
 check("Flink has a RUNNING job", '"state":"RUNNING"' in (out or ""),
       "Submit your INSERT INTO in the Flink SQL Client")
 
-out, _ = run("docker exec kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 "
+out, _ = run("docker exec kafka kafka-console-consumer --bootstrap-server localhost:9092 "
              "--topic condition-monitoring --from-beginning --timeout-ms 8000 --max-messages 10", timeout=20)
 msgs = []
 if out:

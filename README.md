@@ -111,6 +111,100 @@ bash setup-infra.sh
 
 ---
 
+## Beginner Companion (Read This First)
+
+If you are new to Kafka and Flink, use this section as your "mental map" while doing the labs.
+
+### 1) Why Lab 2 installs three jars
+
+You install three artifacts because they serve different roles:
+
+- `flink-sql-connector-kafka` = SQL table connector wiring (so Flink SQL can read/write Kafka topics)
+- `flink-connector-kafka` = runtime implementation used by Flink operators
+- `kafka-clients` = Kafka client library used underneath
+
+If one is missing, jobs may compile but fail at runtime with class-not-found style errors.
+
+### 2) `localhost:9092` vs `kafka:29092`
+
+Use this rule:
+
+- From your host terminal (where you run `python producer.py`): use `localhost:9092`
+- From inside Docker containers (Flink SQL, Kafka UI, PyFlink): use `kafka:29092`
+
+Think of `localhost` as "outside Docker" and `kafka` as "inside Docker network DNS".
+
+### 3) Event time vs processing time (practical view)
+
+- Event time: uses the timestamp in the message payload. Best for correctness when data can arrive late/out of order.
+- Processing time: uses clock time when Flink processes the record. Simpler, but results depend on system timing and delays.
+
+In this workshop, event time is introduced for concept learning, while some exercises may use processing-time-safe patterns to avoid parser/runtime pitfalls in constrained environments.
+
+### 4) What watermarks change
+
+With `WATERMARK ... - INTERVAL '5' SECOND`, Flink assumes records more than ~5s late are "too late" for that event-time window.
+
+Simple intuition:
+
+- late by 2s: usually still counted in the intended window
+- late by 8s: likely dropped from that window computation
+
+### 5) Exactly how to run SQL without confusion
+
+When starting a fresh SQL client session, use this order:
+
+1. source table (`01_source_table.sql`)
+2. sink table (`02_cm_sink.sql` or `05_power_grid_sink.sql`)
+3. your `INSERT INTO` challenge query
+
+If containers restart, assume SQL session state is gone and re-run definitions.
+
+### 6) Consumer group experiment: what to look for
+
+- Same group name in two consumers: each message is processed by one of them (work is split by partitions).
+- Different group names: both consumers receive the full stream independently.
+
+You should see different partition ownership behavior, not just different print timing.
+
+### 7) Why PyFlink runs from `pyflink-runner`
+
+The Python script is your job client and logic host. It submits/executes work against the Flink cluster while using Python UDF code.
+
+So:
+
+- SQL labs: launched from SQL client in JobManager
+- PyFlink lab: launched from Python container with Flink/Python dependencies
+
+### 8) Failure exercise: what to observe
+
+For each failure/recovery action, record:
+
+1. Kafka topic behavior (producer/consumer continuity)
+2. Flink job state transition (`RUNNING`, `RESTARTING`, `FAILED`)
+3. Whether output topics continue updating
+4. Which lecture concept it maps to (checkpointing, backpressure, fault tolerance)
+
+### 9) Cleanup safety
+
+- `docker compose ... down -v` removes this workshop's containers and named volumes (you lose workshop topic/state data).
+- `docker system prune -f` removes unused Docker artifacts globally, which can affect other local projects by deleting stopped containers/images/cache.
+
+If you are unsure, skip prune or inspect with `docker system df` first.
+
+### 10) Suggested solo-study pacing
+
+If studying alone, use this rhythm:
+
+- Lab 1: 30-45 min
+- Lab 2: 45-60 min
+- Lab 3: 45-75 min
+- Lab 4: 45-75 min
+
+If blocked more than 20 min on one step, read the solution, then re-implement from memory once.
+
+---
+
 ## Workshop Schedule
 
 | Time | Block | What You Do |
@@ -127,6 +221,20 @@ bash setup-infra.sh
 
 ---
 
+## Pre-lab Checklist (2 Minutes)
+
+Before starting Lab 1, quickly confirm these basics:
+
+1. Infrastructure is up: run `docker compose ps` and verify `kafka`, `flink-jobmanager`, `flink-taskmanager` are running.
+2. Kafka UI opens at `http://localhost:8080`.
+3. Flink Dashboard opens at `http://localhost:8081`.
+4. Python dependencies are installed: run `python -c "import confluent_kafka; print('ok')"`.
+5. Topic tooling responds: run `docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list`.
+
+If any item fails, run `bash setup-infra.sh`. If still broken, run `bash rescue.sh` and re-check.
+
+---
+
 ## Lab 1: Kafka Basics — Turbine Telemetry
 
 **Goal**: Understand producers, consumers, partitions, and consumer groups using wind turbine data.
@@ -134,7 +242,7 @@ bash setup-infra.sh
 ### Step 1: Create the topic
 
 ```bash
-docker exec kafka kafka-topics.sh \
+docker exec kafka kafka-topics \
   --bootstrap-server localhost:9092 \
   --create --topic turbine-signals --partitions 3 --replication-factor 1
 ```
@@ -180,7 +288,7 @@ This is the **condition monitoring** use case: a remote operations center watche
 ### Step 1: Create the output topic
 
 ```bash
-docker exec kafka kafka-topics.sh \
+docker exec kafka kafka-topics \
   --bootstrap-server localhost:9092 \
   --create --topic condition-monitoring --partitions 3 --replication-factor 1
 ```
@@ -191,8 +299,20 @@ docker exec kafka kafka-topics.sh \
 docker exec flink-jobmanager bash -c \
   "cd /opt/flink/lib && curl -sLO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.1.0-1.18/flink-sql-connector-kafka-3.1.0-1.18.jar"
 
+docker exec flink-jobmanager bash -c \
+  "cd /opt/flink/lib && curl -sLO https://repo1.maven.org/maven2/org/apache/flink/flink-connector-kafka/3.1.0-1.18/flink-connector-kafka-3.1.0-1.18.jar"
+
+docker exec flink-jobmanager bash -c \
+  "cd /opt/flink/lib && curl -sLO https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.5.1/kafka-clients-3.5.1.jar"
+
 docker exec flink-taskmanager bash -c \
   "cd /opt/flink/lib && curl -sLO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.1.0-1.18/flink-sql-connector-kafka-3.1.0-1.18.jar"
+
+docker exec flink-taskmanager bash -c \
+  "cd /opt/flink/lib && curl -sLO https://repo1.maven.org/maven2/org/apache/flink/flink-connector-kafka/3.1.0-1.18/flink-connector-kafka-3.1.0-1.18.jar"
+
+docker exec flink-taskmanager bash -c \
+  "cd /opt/flink/lib && curl -sLO https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.5.1/kafka-clients-3.5.1.jar"
 
 docker compose restart flink-jobmanager flink-taskmanager
 ```
@@ -234,7 +354,7 @@ python verify/check_lab2.py
 ### Step 1: Create the output topic and start PyFlink
 
 ```bash
-docker exec kafka kafka-topics.sh \
+docker exec kafka kafka-topics \
   --bootstrap-server localhost:9092 \
   --create --topic alerts --partitions 3 --replication-factor 1
 
@@ -271,7 +391,7 @@ python verify/check_lab3.py
 **Goal**: Compute 30-second farm-level power output and grid frequency stats. This is the **power production & grid status** use case: grid operators need near-real-time farm output to balance supply and demand.
 
 ```bash
-docker exec kafka kafka-topics.sh \
+docker exec kafka kafka-topics \
   --bootstrap-server localhost:9092 \
   --create --topic power-grid --partitions 3 --replication-factor 1
 ```

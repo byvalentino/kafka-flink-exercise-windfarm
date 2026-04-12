@@ -38,7 +38,7 @@ CREATE TABLE turbine_signals (
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'turbine-signals',
-    'properties.bootstrap.servers' = 'kafka:9092',
+    'properties.bootstrap.servers' = 'kafka:29092',
     'properties.group.id' = 'flink-windfarm',
     'scan.startup.mode' = 'earliest-offset',
     'format' = 'json',
