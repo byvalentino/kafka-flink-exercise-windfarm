@@ -399,7 +399,7 @@ Move beyond SQL static rules: build a Python Flink job with a custom UDF (User-D
 
 #### How to Achieve It
 
-**Step 1: Create output topic and PyFlink container** — Set up the alerts sink and Python runtime (this builds a Docker image; may take 2-3 min).
+**Step 1: Create output topic and PyFlink container** — Set up the alerts sink and Python runtime (this builds a Docker image; may take 2-5 min).
 
 ```bash
 docker exec kafka kafka-topics \
@@ -544,6 +544,7 @@ With everything still running from Part A (producer ongoing, Flink jobs active),
 ```bash
 bash failure_exercise.sh
 ```
+NOTE: if the queue is long enough, it may take a while before Flink starts failing. It will when the queue has been processed.
 
 The script guides you through deliberate failures like:
 - Stopping Kafka broker → see producer/consumer pause.
