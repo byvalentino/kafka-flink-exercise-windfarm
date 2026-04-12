@@ -69,15 +69,33 @@ def detect_vibration_anomaly(
 
     3. Ignore readings from turbines in maintenance (status == 'maintenance')
     """
-    if status == "maintenance":
-        return False
+    # ✏️  REPLACE THIS with your implementation:
+    #
+    # if status == 'maintenance':
+    #     return ???
+    #
+    # # Determine threshold by turbine type
+    # if turbine_id.startswith("WTG-NA"):
+    #     threshold = ???
+    # else:
+    #     threshold = ???
+    #
+    # # Pure vibration check
+    # if vibration > threshold:
+    #     return ???
+    #
+    # # Correlated check: moderate vibration + high temperature
+    # if vibration > ??? and bearing_temp > ???:
+    #     return ???
+    #
+    # return False
 
-    threshold = 4.0 if turbine_id.startswith("WTG-NA") else 3.5
-    if vibration > threshold:
-        return True
-    if vibration > 3.0 and bearing_temp > 65.0:
-        return True
-    return False
+    # Starter placeholder: 
+    # remove this exception after implementing the anomaly rules above.
+    raise NotImplementedError(
+        "TODO: implement anomaly logic using turbine type thresholds, correlated "
+        "vibration+temperature checks, and maintenance filtering"
+    )
 
 
 t_env.create_temporary_function("detect_vibration_anomaly", detect_vibration_anomaly)
@@ -141,13 +159,9 @@ result = t_env.from_path("turbine_signals") \
         col("bearing_temp_celsius"),
         col("active_power_kw"),
         col("status"),
-           col("timestamp").alias("original_ts"),
-        call("detect_vibration_anomaly",
-             col("turbine_id"),
-             col("nacelle_vibration_mm_s"),
-             col("bearing_temp_celsius"),
-             col("status"),
-        ).alias("is_anomaly")
+        col("timestamp").alias("original_ts"),
+        # TODO: replace with call("detect_vibration_anomaly", ...)
+        lit(False).alias("is_anomaly")
     ) \
     .filter(col("is_anomaly") == lit(True)) \
     .select(

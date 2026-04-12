@@ -4,16 +4,16 @@
 			"path": "."
 		},
 		{
-			"path": "../../Downloads/wf-workshop/{flink-sql,pyflink,verify,.devcontainer}"
+			"path": ".{flink-sql,pyflink,verify,.devcontainer}"
 		},
 		{
-			"path": "../../Downloads/wf-workshop/flink-sql"
+			"path": "./flink-sql"
 		},
 		{
-			"path": "../../Downloads/wf-workshop/pyflink"
+			"path": "./pyflink"
 		},
 		{
-			"path": "../../Downloads/wf-workshop/verify"
+			"path": "./verify"
 		}
 	],
 	"settings": {}

@@ -103,7 +103,7 @@ The lecture slides (L8) use general stream processing vocabulary. This workshop 
 Requires: Docker Desktop, Python 3.9+, Git
 
 ```bash
-git clone <repo-url> && cd wf-workshop
+git clone <repo-url>
 bash setup-infra.sh
 ```
 
@@ -237,9 +237,12 @@ If any item fails, run `bash setup-infra.sh`. If still broken, run `bash rescue.
 
 ## Lab 1: Kafka Basics — Turbine Telemetry
 
-**Goal**: Understand producers, consumers, partitions, and consumer groups using wind turbine data.
+#### Learning Objective
+Build your first producer-consumer system using real turbine data. You will learn how messages flow through Kafka topics, how partitions distribute work, and how consumer groups enable load-balanced reading.
 
-### Step 1: Create the topic
+#### How to Achieve It
+
+**Step 1: Create the topic** — Set up a Kafka topic with 3 partitions to distribute turbine readings.
 
 ```bash
 docker exec kafka kafka-topics \
@@ -247,45 +250,62 @@ docker exec kafka kafka-topics \
   --create --topic turbine-signals --partitions 3 --replication-factor 1
 ```
 
-### Step 2: Run the producer (Terminal 1)
+**Step 2: Start the producer** — Open Terminal 1 and watch messages flow to Kafka. You should see output like:
+```
+  ✓ [turbine-signals][p=0] off=42  turbine=WTG-NA-01
+```
+Each line shows partition assignment and offset — proof that messages arrived.
 
 ```bash
 python producer.py
 ```
 
-Watch: 7 turbines across 2 farms producing SCADA readings. Notice how `turbine_id` is used as the message key — all readings from one turbine go to the same partition (ordering guarantee within a partition, slide 36).
-
-### Step 3: Run the consumer (Terminal 2)
+**Step 3: Start the consumer** — Open Terminal 2. You should immediately see the same messages with full SCADA fields (wind_speed, bearing_temp, status, etc.).
 
 ```bash
 python consumer.py
 ```
 
-### Step 4: Experiment with consumer groups
+**Step 4: Understand consumer groups** — This is where Kafka's power shows. Run two more consumers and observe work distribution:
+
+- Same group name: each message is consumed by exactly one (work is partitioned).
+- Different group: both get independent replays.
 
 ```bash
-# Second consumer, SAME group → partitions split between them
+# Same group → no duplicates, work split by partition
 python consumer.py
 
-# Consumer with DIFFERENT group → both see ALL messages
+# Different group → full replay
 python consumer.py --group monitoring-team
 ```
 
-### Step 5: Verify
+**Step 5: Verify** — Run the verifier to confirm topic setup and message validity.
 
 ```bash
 python verify/check_lab1.py
 ```
 
+Expected: All 5 checks pass (✓).
+
+#### If You Get Stuck
+
+- **"Topic already exists"**: Delete and recreate: `docker exec kafka kafka-topics --bootstrap-server localhost:9092 --delete --topic turbine-signals`.
+- **Consumer shows no messages**: Try: `python consumer.py --offset earliest`.
+- **Verify fails on partition count**: Ensure you created with `--partitions 3`.
+- **Kafka container won't respond**: Run: `docker logs kafka | tail -20` or execute `bash rescue.sh`.
+
 ---
 
 ## Lab 2: Flink SQL — Condition Monitoring Stream
 
-**Goal**: Write a Flink SQL query that classifies turbine health from raw SCADA data.
+#### Learning Objective
+Write your first Flink SQL job to transform a raw stream into actionable insights. You will learn how to define streaming tables, apply filtering/classification logic, and understand the difference between reading from Kafka and computing on unbounded streams.
 
-This is the **condition monitoring** use case: a remote operations center watches vibration, bearing temperature, and oil pressure to catch mechanical degradation before a turbine fails.
+**Context**: Operators at a wind farm need instant alerts when turbines show degradation (high vibration, high bearing temp). Your job classifies each reading as normal, warning, or critical.
 
-### Step 1: Create the output topic
+#### How to Achieve It
+
+**Step 1: Create the output topic**
 
 ```bash
 docker exec kafka kafka-topics \
@@ -293,7 +313,7 @@ docker exec kafka kafka-topics \
   --create --topic condition-monitoring --partitions 3 --replication-factor 1
 ```
 
-### Step 2: Install the Flink-Kafka connector
+**Step 2: Install Flink-Kafka runtime** — Flink needs three jars to connect to Kafka (may take 1-2 min).
 
 ```bash
 docker exec flink-jobmanager bash -c \
@@ -317,41 +337,69 @@ docker exec flink-taskmanager bash -c \
 docker compose restart flink-jobmanager flink-taskmanager
 ```
 
-### Step 3: Open the Flink SQL Client
+**Step 3: Open Flink SQL Client**
 
 ```bash
 docker exec -it flink-jobmanager ./bin/sql-client.sh
 ```
 
-### Step 4: Paste the source and sink definitions
+**Step 4: Load source + sink definitions** — Copy-paste entire contents:
+- `flink-sql/01_source_table.sql` (raw `turbine_signals` table)
+- `flink-sql/02_cm_sink.sql` (output `condition_monitoring` table)
 
-Paste the contents of `flink-sql/01_source_table.sql` and `flink-sql/02_cm_sink.sql`.
+You should see two `[INFO] Execute statement succeed.` confirmations.
 
-### Step 5: YOUR CHALLENGE — Write the condition monitoring query
+**Step 5: Write your challenge** — Open `flink-sql/03_challenge_cm.sql`. Implement an `INSERT INTO condition_monitoring SELECT ...` query that:
+- Reads turbine_id, vibration, bearing_temp, oil_pressure, status
+- Classifies each as 'normal', 'warning', or 'critical' using CASE WHEN thresholds
+- Writes to the sink
 
-Open `flink-sql/03_challenge_cm.sql`, read the requirements, write the `INSERT INTO` query.
+Example structure:
+```sql
+INSERT INTO condition_monitoring
+SELECT 
+  turbine_id, farm_id,
+  CASE 
+    WHEN vibration > 5.0 THEN 'critical'
+    WHEN bearing_temp > 70 THEN 'warning'
+    ELSE 'normal'
+  END AS severity,
+  ...
+FROM turbine_signals;
+```
 
-> **Stuck?** Solution: `flink-sql/03_solution_cm.sql`
+Paste into SQL client. Expect: `[INFO] SQL update statement has been successfully submitted to the cluster:` with a Job ID.
 
-### Step 6: BONUS — Asset management stream
-
-Paste `flink-sql/04_asset_mgmt.sql` to see how the same source feeds a second functional stream (filtering for non-running turbines). Study how it works — it's given, not a challenge.
-
-### Step 7: Verify
+**Step 6: Verify** — Check that alerts flow to the output topic.
 
 ```bash
 python verify/check_lab2.py
 ```
 
+Expected: All 6 checks pass (✓).
+
+**Step 7 (BONUS): Study reference** — Paste `flink-sql/04_asset_mgmt.sql` to see how a different functional stream branches off the same source. You won't modify this — just analyze the pattern.
+
+#### If You Get Stuck
+
+- **\"Table not found\"**: You skipped Step 4. Paste `flink-sql/01_source_table.sql` first.
+- **Job submitted but no output**: Is the producer running? Start it: `python producer.py` (Lab 1 step 2).
+- **Severity values don't match**: Read the verifier error first and re-check your CASE threshold order. Use `flink-sql/03_solution_cm.sql` only as a last-resort sanity check.
+- **\"execute statement failed\"**: Syntax error in your query. Copy the solution to see correct CASE WHEN structure.
+- **Job stuck in CREATED**: Wait 30s. If persists, check: `docker logs flink-taskmanager | tail -20`.
+
 ---
 
 ## Lab 3: PyFlink — Vibration Anomaly Detector
 
-**Goal**: Build a Python Flink job with a UDF that detects vibration anomalies per turbine.
+#### Learning Objective
+Move beyond SQL static rules: build a Python Flink job with a custom UDF (User-Defined Function) that detects bearing anomalies using turbine-specific logic and multi-signal correlation. You will learn how to embed Python inside Flink and submit jobs from a Python client.
 
-**Why Python?** SQL can do static thresholds (Lab 2). But real condition monitoring needs per-turbine baselines, multi-signal correlation, or ML model scoring. Python UDFs let you embed that logic inside Flink.
+**Context**: One turbine (WTG-NA-03) has intermittent bearing degradation. Python UDFs enable per-turbine baselines and temporal patterns that SQL alone cannot express.
 
-### Step 1: Create the output topic and start PyFlink
+#### How to Achieve It
+
+**Step 1: Create output topic and PyFlink container** — Set up the alerts sink and Python runtime (this builds a Docker image; may take 2-3 min).
 
 ```bash
 docker exec kafka kafka-topics \
@@ -364,31 +412,62 @@ docker exec pyflink-runner bash -c \
   "cd /opt/flink/lib && curl -sLO https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.1.0-1.18/flink-sql-connector-kafka-3.1.0-1.18.jar"
 ```
 
-### Step 2: YOUR CHALLENGE — Complete the anomaly detector
+**Step 2: Understand the challenge** — Open `pyflink/anomaly_detector.py`. You'll see:
+- A `detect_vibration_anomaly()` UDF stub (takes turbine_id, vibration, bearing_temp, status).
+- A Flink Table API pipeline stub (reads from `turbine_signals`, applies UDF, filters anomalies, writes to `alerts`).
 
-Edit `pyflink/anomaly_detector.py`: implement the UDF and wire up the pipeline.
+Your job: implement the UDF to return `True` if an anomaly is detected, else `False`. Use turbine-specific thresholds and multi-signal checks (high vibration + high temp = more likely an issue).
 
-### Step 3: Run it
+**Step 3: Run your job** — Execute the Python script. It connects to Flink cluster, submits the job, and streams results.
 
 ```bash
 docker exec -it pyflink-runner python anomaly_detector.py
 ```
 
-> **Stuck?** Solution: `pyflink/anomaly_detector_solution.py`
+You should see:
+```
+⚡ Starting vibration anomaly detector...
+   Source: turbine-signals → Filter: detect_vibration_anomaly() → Sink: alerts
+```
 
-### Step 4: Verify
+Let it run while you produce data (Step 4).
+
+**Step 4: Send turbine data** — In another terminal, run the producer with a longer burst (~500 readings) so job has time to process anomalies.
+
+```bash
+python producer.py --burst 500 --interval 0.5
+```
+
+**Step 5: Verify** — Check that anomaly alerts appear, focused on the degraded turbine.
 
 ```bash
 python verify/check_lab3.py
 ```
 
+Expected: All 6 checks pass (✓). Most alerts should originate from WTG-NA-03.
+
+#### If You Get Stuck
+
+- **PyFlink build fails**: Check disk space: `docker system df`. If full, run: `docker system prune -f` (warning: deletes orphaned Docker artifacts).
+- **\"ModuleNotFoundError: No module named 'pyflink'\"**: Container not built. Re-run: `docker compose --profile pyflink up -d --build`.
+- **Job runs but no alerts**: Producer may not be running, or your UDF always returns False. Re-check maintenance filtering and threshold logic first; use `pyflink/anomaly_detector_solution.py` only as a last-resort reference.
+- **Verify fails on turbine origin**: Ensure your UDF flags WTG-NA-03's anomalies (should be ~10-20% of its readings).
+- **\"address already in use\"**: Previous PyFlink is still running. Stop it: `docker compose --profile pyflink down` and retry Step 1.
+
 ---
 
 ## Lab 4: Windowed Aggregation + Failure Exercise
 
-### Part A: Power & Grid Aggregation (20 min)
+### Part A: Power & Grid Windowed Aggregation
 
-**Goal**: Compute 30-second farm-level power output and grid frequency stats. This is the **power production & grid status** use case: grid operators need near-real-time farm output to balance supply and demand.
+#### Learning Objective
+Build your first streaming aggregation job. You will learn how Flink maintains state over time windows, groups data by farm, and emits periodic summaries. This is crucial for real-time dashboards and SLA monitoring.
+
+**Context**: Grid operators need farm-level power summaries every 30 seconds (not per-turbine detail). Your job tumbles the continuous turbine stream into 30-second windows, computes totals/averages per farm, and emits one output record per window.
+
+#### How to Achieve It
+
+**Step 1: Create output topic** — Grid operators will listen to this feed.
 
 ```bash
 docker exec kafka kafka-topics \
@@ -396,27 +475,95 @@ docker exec kafka kafka-topics \
   --create --topic power-grid --partitions 3 --replication-factor 1
 ```
 
-In the Flink SQL Client, paste `flink-sql/05_power_grid_sink.sql`, then write the windowed aggregation from `flink-sql/06_challenge_power.sql`.
+**Step 2: Open Flink SQL Client** (if you closed it).
 
-> Solution: `flink-sql/06_solution_power.sql`
+```bash
+docker exec -it flink-jobmanager ./bin/sql-client.sh
+```
+
+If reusing an existing session from Lab 2, you already have tables defined. Otherwise, paste `flink-sql/01_source_table.sql` and `flink-sql/05_power_grid_sink.sql`.
+
+**Step 3: Load sink definition** — Paste `flink-sql/05_power_grid_sink.sql` to define the output table and Kafka routing.
+
+**Step 4: Write your windowed aggregation** — Open `flink-sql/06_challenge_power.sql`. Implement an `INSERT INTO power_grid_stats` query that:
+- Groups by farm_id
+- Tumbles time into 30-second windows
+- Computes SUM, AVG, MIN/MAX for power, wind speed, grid frequency
+- Counts total readings and "running" status
+
+Example structure:
+```sql
+INSERT INTO power_grid_stats
+SELECT
+  farm_id,
+  window_start,
+  window_end,
+  ROUND(SUM(active_power_kw), 1) AS total_power_kw,
+  ROUND(AVG(active_power_kw), 1) AS avg_power_kw,
+  ...
+FROM TABLE(
+  TUMBLE(TABLE ..., DESCRIPTOR(...), INTERVAL '30' SECOND)
+)
+GROUP BY farm_id, window_start, window_end;
+```
+
+Paste into SQL client. Expect: Job ID confirmation.
+
+**Step 5: Produce data** — Run a long burst (~350 readings) so multiple windows fire.
+
+```bash
+python producer.py --burst 350 --interval 0.8
+```
+
+**Step 6: Verify** — Check that windowed summaries flow to Kafka.
 
 ```bash
 python verify/check_lab4.py
 ```
 
-### Part B: Guided Failure Exercise (20 min)
+Expected: All 7 checks pass (✓), including validation that both farms have aggregated records.
 
-With everything running:
+#### If You Get Stuck
+
+- **\"RowTime field should not be null\"**: Event-time parsing failed. Use processing-time windows (see solution) or clean timestamps.
+- **\"Table not found\"**: You skipped loading the sink. Paste `flink-sql/05_power_grid_sink.sql`.
+- **Job submitted but no output**: Producer may not be running, or windows haven't closed yet. Run producer for >40s so a second window fires. Then check output: `docker exec kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic power-grid --from-beginning --max-messages 5`.
+- **Verify fails on fields**: Your aggregation likely has a schema mismatch. Re-check sink column order and aliases first; use `flink-sql/06_solution_power.sql` only as a last-resort reference.
+
+---
+
+### Part B: Guided Failure Exercise
+
+#### Learning Objective
+Understand how distributed streaming systems handle component failures: broker crashes, job restarts, state recovery. Each failure experiment maps directly to lecture concepts (checkpointing, replication, fault tolerance).
+
+#### How to Achieve It
+
+With everything still running from Part A (producer ongoing, Flink jobs active), run the failure exercise:
 
 ```bash
 bash failure_exercise.sh
 ```
 
-This walks you through killing and restarting components. Each experiment maps to lecture concepts (slides referenced in the script).
+The script guides you through deliberate failures like:
+- Stopping Kafka broker → see producer/consumer pause.
+- Killing a Flink TaskManager → see job restart and state recovery.
+- Network partition → see backpressure and buffering.
+
+Each step references lecture slides where the concept was introduced.
+
+#### If You Get Stuck
+
+- **\"Cannot connect to Kafka\"**: This is expected during Kafka shutdown. Let the script continue — recovery is part of the demo.
+- **Flink jobs stuck in RESTARTING**: Wait 20-30s for TaskManager recovery. If persists, check: `docker logs flink-taskmanager | tail -30`.
+- **Don't know what to observe**: Record: job state (RUNNING → RESTARTING → RUNNING), checkpoint lag, topic lag. Compare before/after each fault.
+- **Unsure about lecture connection**: Each experiment step prints the relevant slide number.
 
 ---
 
 ## Project Structure
+
+Solution files are included for fallback/self-study after you've attempted each challenge.
 
 ```
 wf-workshop/
