@@ -8,10 +8,10 @@ echo -e "\n${BOLD}🔧 Rescue: resetting workshop state...${RESET}\n"
 
 TOPICS=("turbine-signals" "condition-monitoring" "asset-events" "power-grid" "alerts")
 for topic in "${TOPICS[@]}"; do
-    if docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --list 2>/dev/null | grep -qw "$topic"; then
+    if docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list 2>/dev/null | grep -qw "$topic"; then
         warn "Topic '$topic' exists."
     else
-        docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 \
+        docker exec kafka kafka-topics --bootstrap-server localhost:9092 \
             --create --topic "$topic" --partitions 3 --replication-factor 1 2>/dev/null
         info "Created topic: $topic"
     fi

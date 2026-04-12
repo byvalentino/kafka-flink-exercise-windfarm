@@ -10,7 +10,7 @@ docker compose up -d
 
 echo "Waiting for Kafka..."
 for i in $(seq 1 30); do
-    docker exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --list &>/dev/null && { info "Kafka ready."; break; }
+    docker exec kafka kafka-topics --bootstrap-server localhost:9092 --list &>/dev/null && { info "Kafka ready."; break; }
     [ "$i" -eq 30 ] && error "Kafka did not start. Run: docker logs kafka"
     sleep 2
 done
