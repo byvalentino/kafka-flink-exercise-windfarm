@@ -31,7 +31,7 @@ check("Flink has a RUNNING job", '"state":"RUNNING"' in (out or ""),
       "Submit your INSERT INTO in the Flink SQL Client")
 
 out, _ = run("docker exec kafka kafka-console-consumer --bootstrap-server localhost:9092 "
-             "--topic condition-monitoring --from-beginning --timeout-ms 8000 --max-messages 10", timeout=20)
+             "--topic condition-monitoring --from-beginning --timeout-ms 8000 --max-messages 100", timeout=20)
 msgs = []
 if out:
     for line in out.strip().split("\n"):
