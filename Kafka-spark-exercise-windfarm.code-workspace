@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../Downloads/wf-workshop/{flink-sql,pyflink,verify,.devcontainer}"
+		},
+		{
+			"path": "../../Downloads/wf-workshop/flink-sql"
+		},
+		{
+			"path": "../../Downloads/wf-workshop/pyflink"
+		},
+		{
+			"path": "../../Downloads/wf-workshop/verify"
+		}
+	],
+	"settings": {}
+}

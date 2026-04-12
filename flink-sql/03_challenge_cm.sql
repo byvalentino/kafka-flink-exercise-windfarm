@@ -1,0 +1,51 @@
+-- =============================================================
+-- Lab 2, Step 3: YOUR CHALLENGE — Condition Monitoring Stream
+-- =============================================================
+-- Goal: Read from turbine_signals, classify turbine health,
+--       and write to condition_monitoring.
+--
+-- This is the CONDITION MONITORING use case:
+--   A remote monitoring center watches vibration, bearing
+--   temperature, and oil pressure to detect early signs of
+--   mechanical degradation before a turbine fails.
+--
+-- Requirements:
+--   1. Pass through: turbine_id, farm_id
+--   2. Pass through: nacelle_vibration_mm_s, bearing_temp_celsius,
+--      oil_pressure_bar, rotor_rpm, wind_speed_m_s
+--   3. Compute severity:
+--        'critical' if vibration > 10.0  OR  bearing_temp > 75.0
+--        'warning'  if vibration > 5.0   OR  bearing_temp > 60.0
+--        'normal'   otherwise
+--   4. Pass through status as original_status
+--   5. Set processed_at to NOW()
+--   6. Pass through `timestamp` as original_ts
+--
+-- Hints:
+--   - Use CASE WHEN ... THEN ... WHEN ... THEN ... ELSE ... END
+--   - Check the critical thresholds FIRST (order matters)
+--   - Remember backticks on `timestamp`
+--
+-- When done, run:  python verify/check_lab2.py
+-- =============================================================
+
+-- ✏️  YOUR CODE BELOW (uncomment and fill in):
+
+-- INSERT INTO condition_monitoring
+-- SELECT
+--     ???,                                    -- turbine_id
+--     ???,                                    -- farm_id
+--     ???,                                    -- nacelle_vibration_mm_s
+--     ???,                                    -- bearing_temp_celsius
+--     ???,                                    -- oil_pressure_bar
+--     ???,                                    -- rotor_rpm
+--     ???,                                    -- wind_speed_m_s
+--     CASE
+--         WHEN ??? THEN 'critical'
+--         WHEN ??? THEN 'warning'
+--         ELSE ???
+--     END                 AS severity,
+--     ???                 AS original_status,  -- status field
+--     ???                 AS processed_at,     -- current time
+--     ???                 AS original_ts       -- original timestamp string
+-- FROM turbine_signals;

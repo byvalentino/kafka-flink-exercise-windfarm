@@ -1,0 +1,54 @@
+-- =============================================================
+-- Lab 4, Step 2: YOUR CHALLENGE — Farm Power & Grid Aggregation
+-- =============================================================
+-- Goal: Compute 30-second rolling stats PER FARM from turbine_signals,
+--       writing results into power_grid_stats.
+--
+-- This is the POWER PRODUCTION & GRID STATUS use case:
+--   Every 30 seconds, each farm reports total power output,
+--   average wind conditions, and grid frequency stability.
+--
+-- Requirements:
+--   1. Group by farm_id AND the window boundaries
+--   2. Compute:
+--      - total_power_kw:   SUM of active_power_kw
+--      - avg_power_kw:     AVG of active_power_kw (rounded to 1 decimal)
+--      - avg_wind_speed:   AVG of wind_speed_m_s (rounded to 2 decimals)
+--      - max_wind_speed:   MAX of wind_speed_m_s
+--      - avg_grid_freq_hz: AVG of grid_frequency_hz (rounded to 3 decimals)
+--      - min_grid_freq_hz: MIN of grid_frequency_hz
+--      - max_grid_freq_hz: MAX of grid_frequency_hz
+--      - turbine_count:    COUNT(*) — total readings in window
+--      - running_count:    count of readings where status = 'running'
+--
+-- Hints:
+--   - TUMBLE syntax:
+--       FROM TABLE(
+--           TUMBLE(TABLE turbine_signals, DESCRIPTOR(event_time),
+--                  INTERVAL '30' SECOND)
+--       )
+--   - GROUP BY must include: farm_id, window_start, window_end
+--   - SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) counts conditionally
+--   - ROUND(expression, N) for rounding
+--
+-- When done, run:  python verify/check_lab4.py
+-- =============================================================
+
+-- ✏️  YOUR CODE BELOW:
+
+-- INSERT INTO power_grid_stats
+-- SELECT
+--     ???
+-- FROM TABLE(
+--     ???
+-- )
+-- GROUP BY ???;
+
+
+-- =============================================================
+-- BONUS: Sliding window variant
+-- =============================================================
+-- Modify to use a 2-minute window sliding every 30 seconds:
+--   HOP(TABLE turbine_signals, DESCRIPTOR(event_time),
+--       INTERVAL '30' SECOND, INTERVAL '2' MINUTE)
+-- =============================================================

@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../../../git/Kafka-spark-exercise-windfarm"
+		},
+		{
+			"path": "../{flink-sql,pyflink,verify,.devcontainer}"
+		},
+		{
+			"path": "../flink-sql"
+		},
+		{
+			"path": "../pyflink"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {}
+}
