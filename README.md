@@ -621,3 +621,5 @@ docker system prune -f
 | PyFlink import error | Run inside `pyflink-runner` container, not on host |
 | verify script fails | Read the FAIL message — it tells you exactly what's wrong |
 | Everything broken | `bash rescue.sh` |
+
+The repository has been generated with Github Copilot assistance.
